@@ -1,0 +1,6 @@
+{
+  "name": "QR Menu Express",
+  "description": "A real-time restaurant ordering system where customers scan QR codes to browse the menu and order, while staff manage orders via a kitchen dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
