@@ -241,29 +241,32 @@ function MenuPage() {
 
   const pageVariants = {
     initial: (dir: number) => ({
-      rotateY: dir > 0 ? 95 : -95,
-      opacity: 0.7,
-      scale: 0.98,
-      z: -10,
+      rotateY: dir > 0 ? 30 : -30,
+      x: dir > 0 ? 80 : -80,
+      opacity: 0,
+      scale: 0.97,
+      z: -30,
     }),
     animate: {
       rotateY: 0,
+      x: 0,
       opacity: 1,
       scale: 1,
       z: 0,
       transition: {
-        duration: 0.7,
-        ease: [0.25, 1, 0.5, 1] // refined authentic paper spring ease
+        duration: 0.45,
+        ease: [0.16, 1, 0.3, 1] // refined ultra-sleek custom ease-out
       }
     },
     exit: (dir: number) => ({
-      rotateY: dir > 0 ? -95 : 95,
-      opacity: 0.7,
-      scale: 0.98,
-      z: -10,
+      rotateY: dir > 0 ? -30 : 30,
+      x: dir > 0 ? -80 : 80,
+      opacity: 0,
+      scale: 0.97,
+      z: -30,
       transition: {
-        duration: 0.6,
-        ease: [0.25, 1, 0.5, 1]
+        duration: 0.38,
+        ease: [0.16, 1, 0.3, 1]
       }
     })
   };
