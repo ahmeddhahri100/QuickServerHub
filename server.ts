@@ -70,6 +70,29 @@ async function startServer() {
     );
   `);
 
+  // Check if we need to seed the default cafe "bella-vista"
+  const checkBellaVista = db.prepare("SELECT COUNT(*) as count FROM cafes WHERE id = 'bella-vista'").get() as { count: number };
+  if (checkBellaVista.count === 0) {
+    const defaultId = "bella-vista";
+    const defaultName = "Bella Vista Cafe";
+    
+    // Create Default Cafe
+    db.prepare("INSERT INTO cafes (id, name) VALUES (?, ?)").run(defaultId, defaultName);
+    db.prepare("INSERT INTO settings (cafe_id, key, value) VALUES (?, ?, ?)").run(defaultId, 'service_enabled', 'true');
+    db.prepare("INSERT INTO settings (cafe_id, key, value) VALUES (?, ?, ?)").run(defaultId, 'cafe_name', defaultName);
+    
+    // Seed menu items
+    const seed = db.prepare("INSERT INTO menu_items (cafe_id, name, description, price, category, image_url, available) VALUES (?, ?, ?, ?, ?, ?, 1)");
+    seed.run(defaultId, "Truffle Parmesan Fries", "Crispy golden hand-cut fries seasoned with double-shaved Parmigiano-Reggiano, white truffle oil, and fine herbs.", 9.50, "Starter", "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500");
+    seed.run(defaultId, "Heirloom Tomato Salad", "Chilled organic garden tomatoes, hand-torn sweet basil, artisan burrata cheese, and extra-virgin olive oil.", 11.00, "Starter", "https://images.unsplash.com/photo-1592417817098-8f3d6eb19675?w=500");
+    seed.run(defaultId, "Prime Ribeye Steak", "Pan-seared dry-aged USDA Prime Ribeye with rosemary garlic butter, served with rich potato pureé.", 32.00, "Main", "https://images.unsplash.com/photo-1544025162-d76694265947?w=500");
+    seed.run(defaultId, "Truffle Macaroni Gratin", "Imported Cavatappi pasta coddled in creamy fontina, gruyere, and sharp white cheddar, finished with rustic breadcrumbs.", 18.00, "Main", "https://images.unsplash.com/photo-1543339494-b4cd4f7ba686?w=500");
+    seed.run(defaultId, "Signature Pistachio Latte", "A masterfully double-pulled espresso with premium steamed oat milk and handcrafted Sicilian pistachio cream.", 6.50, "Drinks", "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=500");
+    seed.run(defaultId, "Artisanal Mocktail", "A bright, multi-layered cold infusion of fresh blood orange juice, aromatic hibiscus, and crisp elderberry tonic.", 7.00, "Drinks", "https://images.unsplash.com/photo-1536935338788-846bb9981813?w=500");
+    seed.run(defaultId, "Espresso Tiramisu", "Light ladyfingers dunked in sweet strong espresso, nestled under velvety whipped egg-free vanilla mascarpone.", 8.50, "Dessert", "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=500");
+    seed.run(defaultId, "Double Chocolate Fondant", "Warm-centered molten cocoa lava cake served alongside a scoop of organic Tahitian vanilla bean ice cream.", 9.00, "Dessert", "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500");
+  }
+
   app.use(express.json());
 
   // Middleware to extract cafe_id
