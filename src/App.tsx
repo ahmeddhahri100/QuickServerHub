@@ -111,6 +111,7 @@ function MenuPage() {
   
   // Custom book model animation and sizing states
   const [currentPage, setCurrentPage] = useState(0);
+  const [currentSpread, setCurrentSpread] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 992);
 
@@ -160,6 +161,7 @@ function MenuPage() {
         setCart([]);
         setOrderSent(true);
         setCurrentPage(0); // Go back to cover once ordered
+        setCurrentSpread(0);
       }
     } finally {
       setIsSubmitting(false);
@@ -174,21 +176,21 @@ function MenuPage() {
   const pages = useMemo(() => {
     const list: any[] = [];
     
-    // 0. Closed Cover Page
+    // 0. Closed Cover Page (Sheet 0 Front)
     list.push({
       id: "cover",
       type: "cover",
       title: settings?.cafe_name || "Bella Vista Cafe"
     });
 
-    // 1. Table of Contents Left
+    // 1. Table of Contents Left (Sheet 0 Back)
     list.push({
       id: "toc",
       type: "toc",
       title: "Index of Offerings"
     });
 
-    // 2. Chef Welcome Right
+    // 2. Chef Welcome Right (Sheet 1 Front)
     list.push({
       id: "welcome",
       type: "welcome",
@@ -223,6 +225,13 @@ function MenuPage() {
       title: "Table Draft Receipt"
     });
 
+    // Bella Vista History / Heritage Page
+    list.push({
+      id: "history",
+      type: "history",
+      title: "La Storia della Casa"
+    });
+
     // Closing Back Cover
     list.push({
       id: "back-cover",
@@ -233,10 +242,31 @@ function MenuPage() {
     return list;
   }, [menu, categories, settings]);
 
+  // Transform the flat list of pages into a list of double-page leaves (sheets)
+  // Each sheet has a front side (facing right when the book is closed)
+  // and a back side (facing left once it is flipped over)
+  const sheets = useMemo(() => {
+    const list: { front: any; back: any }[] = [];
+    const numSheets = Math.ceil(pages.length / 2);
+    for (let i = 0; i < numSheets; i++) {
+      const frontPage = pages[i * 2];
+      const backPage = pages[i * 2 + 1] || { id: `blank-${i}`, type: "blank" };
+      list.push({
+        front: frontPage,
+        back: backPage
+      });
+    }
+    return list;
+  }, [pages]);
+
   const handlePageChange = (newPage: number) => {
     if (newPage < 0 || newPage >= pages.length) return;
     setDirection(newPage > currentPage ? 1 : -1);
     setCurrentPage(newPage);
+    
+    // Set synchronized spread index
+    const targetSpread = Math.floor((newPage + 1) / 2);
+    setCurrentSpread(targetSpread);
   };
 
   const pageVariants = {
@@ -591,7 +621,6 @@ function MenuPage() {
       );
     }
 
-    // Table Recap Draft Invoice Page
     if (page.type === 'recap') {
       return (
         <div className={pageClass}>
@@ -671,7 +700,53 @@ function MenuPage() {
 
           <div className="flex justify-between items-center text-[10px] text-stone-400 font-mono mt-auto pt-3 border-t border-stone-200/40">
             <span>Spesa</span>
-            <span>Draft • Page {pages.length - 1} of {pages.length}</span>
+            <span>Draft • Page {pages.findIndex(p => p.id === page.id) + 1} of {pages.length}</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (page.type === 'history') {
+      return (
+        <div className={pageClass}>
+          <div className="absolute inset-4 border border-stone-200/60 rounded-lg pointer-events-none" />
+          
+          <div className="text-center mt-6">
+            <span className="text-[10px] uppercase tracking-widest font-black text-[#A69374] block">L'Eredità di Bella Vista</span>
+            <h2 className="text-3xl font-display font-medium text-stone-900 mt-1 mb-2">Our Heritage</h2>
+            <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-amber-600/40 to-transparent mx-auto" />
+          </div>
+
+          <div className="my-5 flex-1 flex flex-col justify-center max-w-sm mx-auto text-center px-4 font-serif italic text-stone-600 text-[13px] leading-relaxed">
+            <p className="mb-4">
+              Bella Vista was founded as a humble seaside terrace where fishermen gathered under the salt air and lemon groves.
+            </p>
+            <p className="mb-4">
+              Over fifty autumns, we have preserved the copper kettles, the hand-pressed olive mill, and the quiet devotion to authentic ingredients.
+            </p>
+            <p>
+              By transmitting your choices from this interactive digital journal, you initiate a link from our heritage to your table. Buon Appetito.
+            </p>
+          </div>
+
+          <div className="text-center mb-6 text-[10px] tracking-widest text-[#A69374]">
+            ESTABLISHED MCMLXXIV • BY THE OCEAN
+          </div>
+
+          <div className="flex justify-between items-center text-[10px] text-stone-400 font-mono mt-auto pt-3 border-t border-stone-200/45">
+            <span>Our Story</span>
+            <span>Page {pages.findIndex(p => p.id === page.id) + 1} of {pages.length}</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (page.type === 'blank') {
+      return (
+        <div className={pageClass}>
+          <div className="absolute inset-4 border border-stone-200/40 rounded-lg pointer-events-none" />
+          <div className="flex-1 flex items-center justify-center">
+            <span className="text-stone-300 font-serif text-[11px] italic tracking-widest">Colophon</span>
           </div>
         </div>
       );
@@ -777,58 +852,121 @@ function MenuPage() {
           <div className="bg-[#261711] rounded-[24px] p-3 md:p-5 shadow-[0_35px_80px_rgba(0,0,0,0.85),_inset_0_2px_4px_rgba(255,255,255,0.06)] relative border-2 border-stone-900 overflow-visible">
             
             {/* Centered binding crease seam (Desktop open states) */}
-            {isDesktop && currentPage > 0 && (
+            {isDesktop && currentSpread > 0 && currentSpread < sheets.length && (
               <div className="absolute top-5 bottom-5 left-1/2 -translate-x-1/2 w-8 bg-gradient-to-r from-stone-950/30 via-stone-950/75 to-stone-950/30 z-15 pointer-events-none shadow-lg border-x border-stone-950/40" />
             )}
 
             {/* Elegantly overlayed Red satin ribbon bookmark down of center fold */}
-            {isDesktop && currentPage > 0 && currentPage < pages.length - 1 && (
+            {isDesktop && currentSpread > 0 && currentSpread < sheets.length && (
               <div className="absolute top-0 bottom-[-16px] left-[50.2%] -translate-x-1/2 w-4 bg-gradient-to-r from-red-700 via-red-600 to-red-800 z-16 shadow-[2px_5px_10px_rgba(0,0,0,0.4)] rounded-b-sm border-x border-red-800/10 transform origin-top hover:scale-x-110 active:skew-x-3 transition-transform" />
             )}
             
             {/* 3D Transform page turn arena */}
             <div className="relative overflow-visible" style={{ perspective: "1800px" }}>
-              <AnimatePresence mode="wait" custom={direction}>
-                <motion.div
-                  key={currentPage}
-                  custom={direction}
-                  variants={pageVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  className={cn(
-                    "grid gap-0",
-                    isDesktop && currentPage > 0 ? "grid-cols-2 lg:divide-x lg:divide-transparent" : "grid-cols-1"
-                  )}
+              {isDesktop ? (
+                /* Pure 3D CSS Real Page Turn Model for Desktop */
+                <div 
+                  className="w-full h-[640px] relative select-none"
                   style={{ transformStyle: "preserve-3d" }}
                 >
-                  {isDesktop && currentPage > 0 ? (
-                    <>
-                      <div className="relative" style={{ transformOrigin: "right center" }}>
-                        {renderPage(pages[currentPage], "left")}
-                      </div>
-                      <div className="relative" style={{ transformOrigin: "left center" }}>
-                        {currentPage + 1 < pages.length ? (
-                          renderPage(pages[currentPage + 1], "right")
-                        ) : (
-                          <div className="w-full h-full bg-[#FCFAF4] rounded-r-2xl border border-l-0 border-stone-200 shadow-md" />
+                  {sheets.map((sheet, index) => {
+                    const isFlipped = index < currentSpread;
+                    const rotateYValue = isFlipped ? -180 : 0;
+                    
+                    // Z-index calculation to stack leaves properly
+                    const baseZ = isFlipped ? index : (sheets.length - index);
+                    
+                    // Elevating zIndex when actively swinging
+                    const isTurning = index === currentSpread || index === currentSpread - 1;
+                    const finalZIndex = isTurning ? 45 : baseZ;
+
+                    return (
+                      <div
+                        key={sheet.front.id + "-" + sheet.back.id}
+                        onClick={(e) => {
+                          const clickTarget = e.target as HTMLElement;
+                          if (clickTarget.closest('button, select, input, a, option')) return;
+                          
+                          // Click left page to flip back
+                          if (isFlipped && index === currentSpread - 1) {
+                            handlePageChange(index * 2);
+                          }
+                          // Click right page to flip forward
+                          else if (!isFlipped && index === currentSpread) {
+                            handlePageChange((index + 1) * 2 - 1);
+                          }
+                        }}
+                        className={cn(
+                          "absolute top-0 right-0 w-1/2 h-full transition-transform duration-[850ms] origin-left ease-in-out cursor-pointer",
+                          (index === currentSpread || index === currentSpread - 1) ? "pointer-events-auto" : "pointer-events-none"
                         )}
+                        style={{
+                          transformStyle: "preserve-3d",
+                          transform: `rotateY(${rotateYValue}deg)`,
+                          zIndex: finalZIndex,
+                        }}
+                      >
+                        {/* FRONT FACE (initially facing right) */}
+                        <div 
+                          className="absolute inset-0 w-full h-full"
+                          style={{
+                            backfaceVisibility: "hidden",
+                            transform: "rotateY(0deg) translateZ(1px)",
+                            transformStyle: "preserve-3d",
+                          }}
+                        >
+                          {renderPage(sheet.front, "right")}
+                          {/* Inner spine crease highlight */}
+                          <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/8 via-black/2 to-transparent pointer-events-none z-10" />
+                          <div className="absolute inset-y-0 right-0 w-[4px] bg-stone-300/40 border-r border-stone-400/20 shadow-xs pointer-events-none z-20" />
+                        </div>
+
+                        {/* BACK FACE (initially facing away, faces left when folded) */}
+                        <div 
+                          className="absolute inset-0 w-full h-full"
+                          style={{
+                            backfaceVisibility: "hidden",
+                            transform: "rotateY(180deg) translateZ(1px)",
+                            transformStyle: "preserve-3d",
+                          }}
+                        >
+                          {renderPage(sheet.back, "left")}
+                          {/* Inner spine crease highlight */}
+                          <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/8 via-black/2 to-transparent pointer-events-none z-10" />
+                          <div className="absolute inset-y-0 left-0 w-[4px] bg-stone-300/40 border-l border-stone-400/20 shadow-xs pointer-events-none z-20" />
+                        </div>
                       </div>
-                    </>
-                  ) : (
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Beautiful Sliding Page Turn Model for Mobile */
+                <AnimatePresence mode="wait" custom={direction}>
+                  <motion.div
+                    key={currentPage}
+                    custom={direction}
+                    variants={pageVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    className="grid grid-cols-1"
+                    style={{ transformStyle: "preserve-3d" }}
+                  >
                     <div style={{ transformOrigin: "center center" }}>
                       {renderPage(pages[currentPage], "single")}
                     </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+                  </motion.div>
+                </AnimatePresence>
+              )}
 
               {/* Desktop physical-styled Leather Tabs on outer edge */}
-              {currentPage > 0 && (
+              {currentSpread > 0 && currentSpread < sheets.length && (
                 <div className="hidden lg:flex flex-col gap-2.5 absolute top-12 -right-[112px] z-20">
                   {categories.map((cat) => {
                     const targetIdx = pages.findIndex(p => p.category === cat);
-                    const isActive = pages[currentPage]?.category === cat || (isDesktop && pages[currentPage + 1]?.category === cat);
+                    const leftPage = pages[currentSpread * 2 - 1];
+                    const rightPage = pages[currentSpread * 2];
+                    const isActive = leftPage?.category === cat || rightPage?.category === cat;
                     return (
                       <button
                         key={cat}
@@ -857,24 +995,36 @@ function MenuPage() {
           {/* Elegant Page Turn Controls beneath wood frame */}
           <div className="flex items-center justify-between mt-8 px-4 relative z-10">
             <button
-              onClick={() => handlePageChange(isDesktop && currentPage > 1 ? currentPage - 2 : currentPage - 1)}
-              disabled={currentPage === 0}
-              className="px-5 py-3.5 bg-stone-900 border border-stone-800 hover:border-amber-600/30 text-stone-300 hover:text-white font-serif text-[10px] uppercase tracking-widest rounded-xl shadow-lg active:scale-95 disabled:opacity-20 disabled:pointer-events-none transition-all flex items-center gap-1.5 cursor-pointer font-bold"
+              onClick={() => {
+                const prevSpread = currentSpread - 1;
+                handlePageChange(prevSpread === 0 ? 0 : prevSpread * 2 - 1);
+              }}
+              disabled={currentSpread === 0}
+              className="px-5 py-3.5 bg-stone-900 border border-stone-800 hover:border-amber-600/30 text-stone-300 hover:text-white font-serif text-[10px] uppercase tracking-widest rounded-xl shadow-lg active:scale-95 disabled:opacity-20 disabled:pointer-events-none transition-all flex items-center gap-1.5 cursor-pointer font-bold animate-fade-in"
             >
               &larr; Previous Leaf
             </button>
             
             <span className="text-[10px] text-stone-400 font-mono tracking-widest uppercase bg-stone-900/40 px-4 py-2.5 rounded-full border border-stone-800">
-              {isDesktop && currentPage > 0 ? (
-                `Pages ${currentPage + 1}-${Math.min(currentPage + 2, pages.length)} • OF ${pages.length}`
+              {isDesktop ? (
+                currentSpread === 0 ? (
+                  `Cover • Page 1 of ${pages.length}`
+                ) : currentSpread >= sheets.length ? (
+                  `Back Cover • Page ${pages.length} of ${pages.length}`
+                ) : (
+                  `Pages ${currentSpread * 2}-${Math.min(currentSpread * 2 + 1, pages.length)} • OF ${pages.length}`
+                )
               ) : (
                 `Page ${currentPage + 1} • OF ${pages.length}`
               )}
             </span>
 
             <button
-              onClick={() => handlePageChange(currentPage === 0 ? 1 : (isDesktop ? currentPage + 2 : currentPage + 1))}
-              disabled={isDesktop ? currentPage >= pages.length - 2 : currentPage === pages.length - 1}
+              onClick={() => {
+                const nextSpread = currentSpread + 1;
+                handlePageChange(nextSpread === 0 ? 0 : nextSpread * 2 - 1);
+              }}
+              disabled={isDesktop ? currentSpread >= sheets.length : currentPage === pages.length - 1}
               className="px-5 py-3.5 bg-gradient-to-r from-amber-600 to-amber-700 border border-amber-700/30 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-serif text-[10px] uppercase tracking-widest rounded-xl shadow-lg active:scale-95 disabled:opacity-20 disabled:pointer-events-none transition-all flex items-center gap-1.5 cursor-pointer font-black"
             >
               Next Leaf &rarr;
